@@ -1,0 +1,41 @@
+server:
+  port: 8083
+
+spring:
+  application:
+    name: job-aggregator-service
+  datasource:
+    url: jdbc:mysql://localhost:3306/joblens?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC
+    username: root
+    password: joblens123
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+  batch:
+    job:
+      enabled: false
+    jdbc:
+      initialize-schema: always
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: job-aggregator
+      auto-offset-reset: earliest
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always

@@ -1,0 +1,24 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: user-service
+  datasource:
+    url: jdbc:mysql://localhost:3306/joblens?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC
+    username: root
+    password: joblens123
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
