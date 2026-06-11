@@ -31,6 +31,16 @@ spring:
       host: localhost
       port: 6379
 
+joblens:
+  fetch:
+    interval-ms: 21600000      # 6 hours — override to a smaller value for local testing
+    initial-delay-ms: 60000   # 1 minute startup delay
+    queries:
+      - what: "java developer"
+        where: "albany"
+      - what: "java developer"
+        where: "new york"
+
 # spring-dotenv: look one level up from the module directory so the root .env
 # is found regardless of whether Maven is invoked from the repo root or the
 # module folder. ignore-if-missing keeps CI/CD working when vars come from
