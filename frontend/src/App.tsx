@@ -4,6 +4,9 @@ import type { Job, PageResponse } from './types/job'
 import { useDebounce } from './hooks/useDebounce'
 import JobCard from './components/JobCard'
 import FilterBar from './components/FilterBar'
+import AuthModal from './components/AuthModal'
+import { useAuth } from './context/AuthContext'
+import { useToast } from './context/ToastContext'
 
 // ── Skeleton ──────────────────────────────────────────────────────────────────
 
@@ -149,6 +152,21 @@ function Pagination({
 const PAGE_SIZE = 20
 
 export default function App() {
+  const { user, logout, restoring } = useAuth()
+  const { addToast } = useToast()
+  const [authOpen, setAuthOpen] = useState(false)
+  const [authMode, setAuthMode] = useState<'login' | 'signup'>('login')
+
+  function openAuth(mode: 'login' | 'signup') {
+    setAuthMode(mode)
+    setAuthOpen(true)
+  }
+
+  function handleLogout() {
+    logout()
+    addToast("You've been logged out.", 'neutral')
+  }
+
   // Raw text filter state (shown in inputs immediately)
   const [rawWhat, setRawWhat] = useState('')
   const [rawWhere, setRawWhere] = useState('')
@@ -208,7 +226,8 @@ export default function App() {
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <header className="sticky top-0 z-10 border-b border-slate-800/60 bg-[#080b12]/80 backdrop-blur-md">
         <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-2.5">
+          {/* Logo */}
+          <div className="flex items-center gap-2.5 shrink-0">
             <div className="w-7 h-7 rounded-lg bg-indigo-600 flex items-center justify-center shrink-0">
               <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5}
@@ -217,12 +236,47 @@ export default function App() {
             </div>
             <span className="text-base font-bold tracking-tight text-white">JobLens</span>
           </div>
-          <p className="text-sm text-slate-600 hidden md:block">AI-powered job matching</p>
-          {result && !loading && (
-            <span className="text-xs font-medium text-slate-500 bg-slate-800/60 px-2.5 py-1 rounded-full whitespace-nowrap">
-              {result.totalElements.toLocaleString()} jobs
-            </span>
-          )}
+
+          {/* Right side */}
+          <div className="flex items-center gap-3">
+            {result && !loading && (
+              <span className="text-xs font-medium text-slate-500 bg-slate-800/60 px-2.5 py-1 rounded-full whitespace-nowrap hidden sm:inline">
+                {result.totalElements.toLocaleString()} jobs
+              </span>
+            )}
+
+            {/* Auth controls — hidden while restoring to avoid flash */}
+            {!restoring && (
+              user ? (
+                <div className="flex items-center gap-2.5">
+                  <span className="text-sm text-slate-400 hidden sm:block max-w-[140px] truncate">
+                    {user.name ?? user.email}
+                  </span>
+                  <button
+                    onClick={handleLogout}
+                    className="text-xs font-medium text-slate-400 hover:text-white border border-slate-800 hover:border-slate-600 bg-slate-900 hover:bg-slate-800 px-3 py-1.5 rounded-lg transition-colors"
+                  >
+                    Log out
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => openAuth('login')}
+                    className="text-xs font-medium text-slate-300 hover:text-white border border-slate-700 hover:border-slate-500 bg-slate-900 hover:bg-slate-800 px-3 py-1.5 rounded-lg transition-colors"
+                  >
+                    Log in
+                  </button>
+                  <button
+                    onClick={() => openAuth('signup')}
+                    className="text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-500 px-3 py-1.5 rounded-lg transition-colors"
+                  >
+                    Sign up
+                  </button>
+                </div>
+              )
+            )}
+          </div>
         </div>
       </header>
 
@@ -287,6 +341,12 @@ export default function App() {
           )
         )}
       </main>
+
+      <AuthModal
+        isOpen={authOpen}
+        initialMode={authMode}
+        onClose={() => setAuthOpen(false)}
+      />
     </div>
   )
 }
