@@ -35,3 +35,7 @@ target/
 *.iml
 .vscode/
 *.DS_Store
+
+# Resume uploads — local file storage, not committed
+resume-uploads/
+**/resume-uploads/
