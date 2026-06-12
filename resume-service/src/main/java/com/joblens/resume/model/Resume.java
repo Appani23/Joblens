@@ -32,6 +32,10 @@ public class Resume {
     @Column(nullable = false)
     private boolean parsed = false;
 
+    // Claude's structured extraction stored as raw JSON text
+    @Column(columnDefinition = "TEXT")
+    private String parsedJson;
+
     @Column(nullable = false, updatable = false)
     private LocalDateTime uploadedAt;
 

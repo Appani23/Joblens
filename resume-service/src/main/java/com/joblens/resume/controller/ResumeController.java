@@ -3,6 +3,7 @@ package com.joblens.resume.controller;
 import com.joblens.resume.dto.ResumeResponse;
 import com.joblens.resume.model.Resume;
 import com.joblens.resume.repository.ResumeRepository;
+import com.joblens.resume.service.ResumeParsingService;
 import com.joblens.resume.storage.StorageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,23 +21,23 @@ import java.util.UUID;
 @Slf4j
 public class ResumeController {
 
-    private static final long MAX_BYTES = 5L * 1024 * 1024; // 5 MB
+    private static final long MAX_BYTES = 5L * 1024 * 1024;
     private static final String PDF_CONTENT_TYPE = "application/pdf";
 
     private final ResumeRepository resumeRepository;
     private final StorageService storageService;
+    private final ResumeParsingService resumeParsingService;
+
+    // ── POST /upload ──────────────────────────────────────────────────────────
 
     @PostMapping("/upload")
     public ResponseEntity<?> upload(@RequestParam("file") MultipartFile file,
                                     Principal principal) {
-        // Content-type validation
         String contentType = file.getContentType();
         if (!PDF_CONTENT_TYPE.equals(contentType)) {
             return ResponseEntity.badRequest()
                     .body(Map.of("error", "Only PDF files are accepted (received: " + contentType + ")"));
         }
-
-        // Size validation (belt-and-suspenders alongside multipart config)
         if (file.getSize() > MAX_BYTES) {
             return ResponseEntity.badRequest()
                     .body(Map.of("error", "File exceeds the 5 MB limit"));
@@ -61,13 +62,35 @@ public class ResumeController {
                 .storagePath(storagePath)
                 .contentType(contentType)
                 .fileSizeBytes(file.getSize())
-                .parsed(false)
                 .build();
         resumeRepository.save(resume);
-
         log.info("Resume uploaded — user={}, file={}, bytes={}", userEmail, file.getOriginalFilename(), file.getSize());
+
+        // Parse immediately (synchronous). If Claude is unavailable the upload
+        // still succeeds; the client can call POST /parse later.
+        try {
+            resumeParsingService.parse(resume);
+        } catch (Exception e) {
+            log.warn("Auto-parse failed after upload (resume {}): {}", resume.getId(), e.getMessage());
+        }
+
         return ResponseEntity.ok(toResponse(resume));
     }
+
+    // ── POST /parse ───────────────────────────────────────────────────────────
+
+    @PostMapping("/parse")
+    public ResponseEntity<?> parse(Principal principal) {
+        return resumeRepository
+                .findTopByUserEmailOrderByUploadedAtDesc(principal.getName())
+                .map(resume -> {
+                    resumeParsingService.parse(resume);
+                    return ResponseEntity.ok((Object) toResponse(resume));
+                })
+                .orElse(ResponseEntity.status(404).body(Map.of("error", "No resume found — upload one first")));
+    }
+
+    // ── GET /me ───────────────────────────────────────────────────────────────
 
     @GetMapping("/me")
     public ResponseEntity<?> getMyResume(Principal principal) {
@@ -77,7 +100,16 @@ public class ResumeController {
                 .orElse(ResponseEntity.status(404).body(Map.of("error", "No resume found")));
     }
 
+    // ── Helpers ───────────────────────────────────────────────────────────────
+
     private ResumeResponse toResponse(Resume r) {
-        return new ResumeResponse(r.getId(), r.getOriginalFilename(), r.getFileSizeBytes(), r.getUploadedAt());
+        return new ResumeResponse(
+                r.getId(),
+                r.getOriginalFilename(),
+                r.getFileSizeBytes(),
+                r.getUploadedAt(),
+                r.isParsed(),
+                r.getParsedJson()
+        );
     }
 }

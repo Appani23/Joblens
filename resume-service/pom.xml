@@ -13,7 +13,7 @@
 
     <artifactId>resume-service</artifactId>
     <name>resume-service</name>
-    <description>Resume upload and parsing service</description>
+    <description>Resume upload and AI parsing service</description>
 
     <dependencies>
         <dependency>
@@ -32,6 +32,7 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-security</artifactId>
         </dependency>
+        <!-- JWT validation (same version managed in parent) -->
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-api</artifactId>
@@ -43,6 +44,22 @@
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-jackson</artifactId>
+        </dependency>
+        <!-- Resilience4j circuit breaker + retry for Claude API calls -->
+        <dependency>
+            <groupId>io.github.resilience4j</groupId>
+            <artifactId>resilience4j-spring-boot3</artifactId>
+        </dependency>
+        <!-- AOP is required for Resilience4j annotations to work -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-aop</artifactId>
+        </dependency>
+        <!-- Loads ANTHROPIC_API_KEY from root .env at startup -->
+        <dependency>
+            <groupId>me.paulschwarz</groupId>
+            <artifactId>spring-dotenv</artifactId>
+            <version>4.0.0</version>
         </dependency>
         <dependency>
             <groupId>com.mysql</groupId>
