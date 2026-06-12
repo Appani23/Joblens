@@ -12,19 +12,37 @@ spring:
   jpa:
     hibernate:
       ddl-auto: update
-    show-sql: true
-  kafka:
-    bootstrap-servers: localhost:9092
-    consumer:
-      group-id: matching-service
-      auto-offset-reset: earliest
-    producer:
-      key-serializer: org.apache.kafka.common.serialization.StringSerializer
-      value-serializer: org.apache.kafka.common.serialization.StringSerializer
-  data:
-    redis:
-      host: localhost
-      port: 6379
+    show-sql: false
+
+# Must match user-service jwt.secret exactly
+jwt:
+  secret: am9ibGVucy1qd3Qtc2VjcmV0LWtleS1mb3ItdXNlci1zZXJ2aWNlLW11c3QtYmUtbG9uZy1lbm91Z2g=
+
+anthropic:
+  api-key: ${ANTHROPIC_API_KEY}
+  model: claude-sonnet-4-6
+  base-url: https://api.anthropic.com
+
+dotenv:
+  directory: ../
+  ignore-if-missing: true
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      anthropic:
+        sliding-window-size: 10
+        failure-rate-threshold: 60
+        wait-duration-in-open-state: 60s
+        permitted-number-of-calls-in-half-open-state: 3
+  retry:
+    instances:
+      anthropic:
+        max-attempts: 2
+        wait-duration: 2s
+        retry-exceptions:
+          - java.io.IOException
+          - org.springframework.web.client.ResourceAccessException
 
 management:
   endpoints:
