@@ -29,4 +29,7 @@ public class JobMatch {
 
     @Column(nullable = false)
     private LocalDateTime matchedAt;
+
+    private String jobLevel;
+    private String workMode;
 }

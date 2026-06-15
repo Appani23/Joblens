@@ -10,5 +10,7 @@ public record MatchResult(
         String company,
         String location,
         String applyUrl,
-        LocalDateTime matchedAt
+        LocalDateTime matchedAt,
+        String jobLevel,
+        String workMode
 ) {}

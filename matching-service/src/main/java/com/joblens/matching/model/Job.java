@@ -3,10 +3,11 @@ package com.joblens.matching.model;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 /**
- * Read-only view of the "jobs" table written by job-aggregator-service.
- * Only the columns needed for matching are mapped here.
+ * Read/write view of the "jobs" table shared with job-aggregator-service.
+ * Matching-service writes jobLevel/workMode/requiredYears back here after scoring.
  */
 @Entity
 @Table(name = "jobs")
@@ -28,4 +29,8 @@ public class Job {
     private String applyUrl;
 
     private String source;
+
+    @Setter private String jobLevel;
+    @Setter private String workMode;
+    @Setter private Integer requiredYears;
 }

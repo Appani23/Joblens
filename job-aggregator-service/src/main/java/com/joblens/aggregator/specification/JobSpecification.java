@@ -12,15 +12,13 @@ public final class JobSpecification {
 
     private JobSpecification() {}
 
-    /**
-     * Builds a JPA Specification from the provided optional filter values.
-     * Null / blank parameters are ignored — they add no predicate.
-     */
     public static Specification<Job> withFilters(
             String what,
             String where,
             String company,
-            Integer datePostedDays) {
+            Integer datePostedDays,
+            String jobLevel,
+            String workMode) {
 
         return (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
@@ -45,8 +43,15 @@ public final class JobSpecification {
 
             if (datePostedDays != null && datePostedDays > 0) {
                 LocalDateTime cutoff = LocalDateTime.now().minusDays(datePostedDays);
-                // Jobs with a null postedDate are excluded when a date filter is active
                 predicates.add(cb.greaterThanOrEqualTo(root.get("postedDate"), cutoff));
+            }
+
+            if (jobLevel != null && !jobLevel.isBlank()) {
+                predicates.add(cb.equal(root.get("jobLevel"), jobLevel));
+            }
+
+            if (workMode != null && !workMode.isBlank()) {
+                predicates.add(cb.equal(root.get("workMode"), workMode));
             }
 
             return cb.and(predicates.toArray(new Predicate[0]));

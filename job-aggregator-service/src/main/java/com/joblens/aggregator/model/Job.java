@@ -44,6 +44,10 @@ public class Job {
 
     private LocalDateTime lastSeenAt;
 
+    private String jobLevel;    // Junior / Mid / Senior (populated by matching-service)
+    private String workMode;    // Remote / Hybrid / Onsite (populated by matching-service)
+    private Integer requiredYears;
+
     @PrePersist
     private void prePersist() {
         if (fetchedAt == null) {

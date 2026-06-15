@@ -17,11 +17,10 @@ import java.util.List;
 @Slf4j
 public class AnthropicClient {
 
-    // Max chars of job description sent to Claude — keeps token usage reasonable
     private static final int MAX_DESC_CHARS = 1200;
 
     private static final String PROMPT_TEMPLATE = """
-            You are a job match scorer. Score how well this candidate matches this job.
+            You are a job match scorer and job-attribute extractor.
 
             CANDIDATE PROFILE:
             %s
@@ -30,13 +29,17 @@ public class AnthropicClient {
             Title: %s
             Description: %s
 
-            SCORING RULES (return a single 0–100 integer):
-            - SKILLS (~45%%): Overlap between candidate's skills and skills mentioned or implied by the job. High overlap = high score contribution.
-            - TITLE FIT (~30%%): These are EQUIVALENT high-fit titles: "Java Developer", "Senior Java Developer", "Sr. Java Developer", "Java Full Stack Developer", "Full Stack Developer" (Java-based), "Backend Java Developer", "Java/J2EE Developer", adjacent Java-heavy "Software Engineer/Developer" roles. Unrelated roles (QA/Test Engineer, Flutter, COBOL-only, Account Manager, non-Java Architect) = low title fit.
+            TASK 1 — SCORE (0-100 integer):
+            - SKILLS (~45%%): Overlap between the candidate's skills/tools and what the job requires or implies. Consider both explicit mentions and strong implications (e.g. Spring Boot implies Java).
+            - TITLE FIT (~30%%): How well the job title aligns with the candidate's background and target role based on their profile. Score relative to the CANDIDATE'S field, not a fixed template.
             - EXPERIENCE FIT (~25%%): Candidate has %d years. If the job requires <= candidate years: full marks. 7–8 year requirement: small penalty (~5–10 pts). 9–12+ year "Expert/Architect" requirement: larger penalty (~15–25 pts). Never hard-reject on experience alone.
 
-            Return ONLY valid JSON — no markdown fences, no preamble:
-            {"score": <integer 0-100>, "reasoning": "<one concise sentence explaining the main driver>"}
+            TASK 2 — EXTRACT from the job description:
+            - workMode: "Remote" if fully remote/WFH, "Hybrid" if hybrid/flexible schedule, "Onsite" otherwise. Default "Onsite" if not mentioned.
+            - requiredYears: minimum years of experience explicitly required, as an integer. Use 0 if not stated.
+
+            Return ONLY valid JSON — no markdown fences, no extra text:
+            {"score": <integer 0-100>, "reasoning": "<one concise sentence>", "workMode": "<Remote|Hybrid|Onsite>", "requiredYears": <integer>}
             """;
 
     private final RestClient restClient;
@@ -63,7 +66,7 @@ public class AnthropicClient {
 
         var request = new MessagesRequest(
                 props.getModel(),
-                200,
+                300,
                 List.of(new Message("user", List.of(new ContentBlock("text", prompt))))
         );
 
@@ -86,14 +89,13 @@ public class AnthropicClient {
                 .trim();
     }
 
-    // Fallback — returns null to signal "skip this job"
     String scoreFallback(String resumeParsedJson, String jobTitle, String jobDescription,
                          int candidateYears, Throwable ex) {
         log.warn("Claude unavailable for job '{}': {}", jobTitle, ex.getMessage());
         return null;
     }
 
-    // ── Request DTOs ─────────────────────────────────────────────────────────
+    // ── Request DTOs ──────────────────────────────────────────────────────────
 
     record MessagesRequest(
             String model,

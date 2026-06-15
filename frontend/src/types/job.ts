@@ -12,6 +12,9 @@ export interface Job {
   postedDate: string | null
   fetchedAt: string
   lastSeenAt: string | null
+  jobLevel: string | null
+  workMode: string | null
+  requiredYears: number | null
 }
 
 export interface PageResponse<T> {

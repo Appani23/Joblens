@@ -31,6 +31,8 @@ export interface MatchResult {
   location: string | null
   applyUrl: string | null
   matchedAt: string
+  jobLevel: string | null
+  workMode: string | null
 }
 
 export async function getMyResume(token: string): Promise<ResumeInfo> {

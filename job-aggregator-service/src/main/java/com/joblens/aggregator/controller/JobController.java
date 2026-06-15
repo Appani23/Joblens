@@ -34,23 +34,22 @@ public class JobController {
             @RequestParam(required = false) String where,
             @RequestParam(required = false) String company,
             @RequestParam(required = false) Integer datePostedDays,
+            @RequestParam(required = false) String jobLevel,
+            @RequestParam(required = false) String workMode,
             @RequestParam(defaultValue = "recent") String sort,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
 
-        Specification<Job> spec = JobSpecification.withFilters(what, where, company, datePostedDays);
+        Specification<Job> spec = JobSpecification.withFilters(
+                what, where, company, datePostedDays, jobLevel, workMode);
         Pageable pageable = PageRequest.of(page, size, resolveSort(sort));
         return jobEntityRepository.findAll(spec, pageable);
     }
 
-    /**
-     * "relevance" will use a match-score sort once matching-service is wired;
-     * for now it falls through to "recent" so the endpoint works end-to-end.
-     */
     private Sort resolveSort(String sort) {
         return Sort.by(
                 Sort.Order.desc("postedDate"),
-                Sort.Order.desc("id")   // stable tiebreaker: higher id = fetched later
+                Sort.Order.desc("id")
         );
     }
 }

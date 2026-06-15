@@ -36,6 +36,8 @@ public class MatchingService {
     /**
      * Scores every job against the user's most-recent parsed resume.
      * Deletes stale scores first so each run is idempotent — no duplicates accumulate.
+     * Also writes jobLevel/workMode/requiredYears back to the jobs table so
+     * GET /api/jobs can filter and display these attributes.
      */
     public MatchSummary runForUser(String userEmail) {
         Resume resume = resumeRepository.findTopByUserEmailOrderByUploadedAtDesc(userEmail)
@@ -51,7 +53,6 @@ public class MatchingService {
         log.info("=== Matching run: user={}, resume={}, jobs={} ===",
                 userEmail, resume.getId(), jobs.size());
 
-        // Delete all previous scores for this user so stale rows never accumulate
         jobMatchRepository.deleteByUserEmail(userEmail);
 
         long startMs = System.currentTimeMillis();
@@ -78,10 +79,6 @@ public class MatchingService {
         return new MatchSummary(jobs.size(), scored.get(), matchesAbove70);
     }
 
-    /**
-     * Returns stored matches for a user at or above minScore, enriched with job details.
-     * Never triggers a scoring run.
-     */
     public List<MatchResult> getMatches(String userEmail, int minScore) {
         List<JobMatch> matches = jobMatchRepository
                 .findByUserEmailAndScoreGreaterThanEqualOrderByScoreDesc(userEmail, minScore);
@@ -96,12 +93,13 @@ public class MatchingService {
                     job != null ? job.getCompany() : null,
                     job != null ? job.getLocation() : null,
                     job != null ? job.getApplyUrl() : null,
-                    m.getMatchedAt()
+                    m.getMatchedAt(),
+                    m.getJobLevel(),
+                    m.getWorkMode()
             );
         }).toList();
     }
 
-    /** Removes all stored scores for a user (called when a new resume is uploaded). */
     public void clearMatchesForUser(String userEmail) {
         jobMatchRepository.deleteByUserEmail(userEmail);
         log.info("Cleared job matches for user={}", userEmail);
@@ -117,7 +115,6 @@ public class MatchingService {
                     parsedJson, job.getTitle(), job.getDescription(), yearsExperience);
 
             if (rawJson == null) {
-                // Circuit breaker open or all retries exhausted — skip this job
                 skipped.incrementAndGet();
                 return;
             }
@@ -125,12 +122,25 @@ public class MatchingService {
             JsonNode node = objectMapper.readTree(rawJson);
             int score = Math.min(100, Math.max(0, node.path("score").asInt(0)));
             String reasoning = node.path("reasoning").asText("No reasoning provided");
+            String workMode = sanitizeWorkMode(node.path("workMode").asText("Onsite"));
+            int reqYearsInt = node.path("requiredYears").asInt(0);
+            Integer requiredYears = reqYearsInt > 0 ? reqYearsInt : null;
+            String jobLevel = computeJobLevel(requiredYears);
+
+            // Write inferred attributes back to the jobs table (shared DB with job-aggregator)
+            // so GET /api/jobs can filter and display them without a separate scoring step.
+            job.setJobLevel(jobLevel);
+            job.setWorkMode(workMode);
+            job.setRequiredYears(requiredYears);
+            jobRepository.save(job);
 
             JobMatch match = new JobMatch();
             match.setUserEmail(userEmail);
             match.setJobId(job.getId());
             match.setScore(score);
             match.setReasoning(reasoning);
+            match.setJobLevel(jobLevel);
+            match.setWorkMode(workMode);
             match.setMatchedAt(LocalDateTime.now());
             jobMatchRepository.save(match);
 
@@ -142,6 +152,22 @@ public class MatchingService {
             log.warn("  Failed to score job {} ({}): {}", job.getId(), job.getTitle(), e.getMessage());
             skipped.incrementAndGet();
         }
+    }
+
+    private static String computeJobLevel(Integer requiredYears) {
+        if (requiredYears == null) return null;
+        if (requiredYears < 5) return "Junior";
+        if (requiredYears <= 8) return "Mid";
+        return "Senior";
+    }
+
+    private static String sanitizeWorkMode(String raw) {
+        if (raw == null) return "Onsite";
+        return switch (raw.trim()) {
+            case "Remote" -> "Remote";
+            case "Hybrid" -> "Hybrid";
+            default -> "Onsite";
+        };
     }
 
     private int extractYearsExperience(String parsedJson) {
