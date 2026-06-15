@@ -37,4 +37,11 @@ public class MatchController {
         List<MatchResult> results = matchingService.getMatches(principal.getName(), minScore);
         return ResponseEntity.ok(results);
     }
+
+    /** Called by the frontend after a new resume is uploaded to invalidate stale scores. */
+    @DeleteMapping("/me")
+    public ResponseEntity<Void> clearMatches(Principal principal) {
+        matchingService.clearMatchesForUser(principal.getName());
+        return ResponseEntity.noContent().build();
+    }
 }

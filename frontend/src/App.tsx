@@ -5,6 +5,7 @@ import { useDebounce } from './hooks/useDebounce'
 import JobCard from './components/JobCard'
 import FilterBar from './components/FilterBar'
 import AuthModal from './components/AuthModal'
+import MyMatchesPanel from './components/MyMatchesPanel'
 import { useAuth } from './context/AuthContext'
 import { useToast } from './context/ToastContext'
 
@@ -152,10 +153,16 @@ function Pagination({
 const PAGE_SIZE = 20
 
 export default function App() {
-  const { user, logout, restoring } = useAuth()
+  const { user, token, logout, restoring } = useAuth()
   const { addToast } = useToast()
   const [authOpen, setAuthOpen] = useState(false)
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login')
+  const [tab, setTab] = useState<'all' | 'matches'>('all')
+
+  // Reset to All Jobs when the user logs out
+  useEffect(() => {
+    if (!user) setTab('all')
+  }, [user])
 
   function openAuth(mode: 'login' | 'signup') {
     setAuthMode(mode)
@@ -283,62 +290,102 @@ export default function App() {
       {/* ── Main ───────────────────────────────────────────────────────────── */}
       <main className="max-w-6xl mx-auto px-6 py-8">
 
-        {/* Filter bar — always visible */}
-        <FilterBar
-          what={rawWhat}
-          where={rawWhere}
-          datePostedDays={datePostedDays}
-          sort={sort}
-          onWhatChange={handleWhatChange}
-          onWhereChange={handleWhereChange}
-          onDatePostedDaysChange={handleDateChange}
-          onSortChange={handleSortChange}
-          onClear={handleClear}
-        />
-
-        {/* Section heading */}
-        <div className="mb-6 flex items-baseline justify-between gap-4">
-          <h1 className="text-lg font-bold text-white tracking-tight">
-            {isFiltered ? 'Filtered results' : 'Latest Jobs'}
-          </h1>
-          {result && !loading && (
-            <p className="text-sm text-slate-600 shrink-0">
-              {result.totalElements.toLocaleString()} position{result.totalElements !== 1 ? 's' : ''}
-              {result.totalPages > 1 && (
-                <> &middot; page {result.number + 1} of {result.totalPages}</>
-              )}
-            </p>
-          )}
+        {/* ── Tab switcher ─────────────────────────────────────────────────── */}
+        <div className="flex items-center gap-1 mb-7 border-b border-slate-800/60 -mx-6 px-6">
+          {(['all', 'matches'] as const).map(t => {
+            const label = t === 'all' ? 'All Jobs' : 'My Matches'
+            const active = tab === t
+            const locked = t === 'matches' && !user
+            return (
+              <button
+                key={t}
+                onClick={() => {
+                  if (locked) { openAuth('login'); return }
+                  setTab(t)
+                }}
+                className={[
+                  'relative pb-3 px-1 mr-5 text-sm font-medium transition-colors',
+                  active
+                    ? 'text-white after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-indigo-500 after:rounded-full'
+                    : locked
+                      ? 'text-slate-600 hover:text-slate-400'
+                      : 'text-slate-500 hover:text-slate-300',
+                ].join(' ')}
+              >
+                {label}
+                {locked && (
+                  <span className="ml-1.5 text-xs text-slate-700">(log in)</span>
+                )}
+              </button>
+            )
+          })}
         </div>
 
-        {/* Loading skeleton */}
-        {loading && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)}
-          </div>
+        {/* ── My Matches tab ───────────────────────────────────────────────── */}
+        {tab === 'matches' && user && token && (
+          <MyMatchesPanel token={token} />
         )}
 
-        {/* Error */}
-        {!loading && error && <ErrorState message={error} />}
+        {/* ── All Jobs tab ─────────────────────────────────────────────────── */}
+        {tab === 'all' && (
+          <>
+            <FilterBar
+              what={rawWhat}
+              where={rawWhere}
+              datePostedDays={datePostedDays}
+              sort={sort}
+              onWhatChange={handleWhatChange}
+              onWhereChange={handleWhereChange}
+              onDatePostedDaysChange={handleDateChange}
+              onSortChange={handleSortChange}
+              onClear={handleClear}
+            />
 
-        {/* Results */}
-        {!loading && !error && result && (
-          result.content.length === 0 ? (
-            <EmptyState isFiltered={isFiltered} onClear={handleClear} />
-          ) : (
-            <>
+            {/* Section heading */}
+            <div className="mb-6 flex items-baseline justify-between gap-4">
+              <h1 className="text-lg font-bold text-white tracking-tight">
+                {isFiltered ? 'Filtered results' : 'Latest Jobs'}
+              </h1>
+              {result && !loading && (
+                <p className="text-sm text-slate-600 shrink-0">
+                  {result.totalElements.toLocaleString()} position{result.totalElements !== 1 ? 's' : ''}
+                  {result.totalPages > 1 && (
+                    <> &middot; page {result.number + 1} of {result.totalPages}</>
+                  )}
+                </p>
+              )}
+            </div>
+
+            {/* Loading skeleton */}
+            {loading && (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {result.content.map(job => <JobCard key={job.id} job={job} />)}
+                {Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)}
               </div>
-              <Pagination
-                page={result.number}
-                totalPages={result.totalPages}
-                first={result.first}
-                last={result.last}
-                onPageChange={handlePageChange}
-              />
-            </>
-          )
+            )}
+
+            {/* Error */}
+            {!loading && error && <ErrorState message={error} />}
+
+            {/* Results */}
+            {!loading && !error && result && (
+              result.content.length === 0 ? (
+                <EmptyState isFiltered={isFiltered} onClear={handleClear} />
+              ) : (
+                <>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {result.content.map(job => <JobCard key={job.id} job={job} />)}
+                  </div>
+                  <Pagination
+                    page={result.number}
+                    totalPages={result.totalPages}
+                    first={result.first}
+                    last={result.last}
+                    onPageChange={handlePageChange}
+                  />
+                </>
+              )
+            )}
+          </>
         )}
       </main>
 
