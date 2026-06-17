@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import type { Job } from '../types/job'
 
 // ── Shared helpers ────────────────────────────────────────────────────────────
@@ -61,13 +60,13 @@ export function WorkModePill({ mode }: { mode: string }) {
 
 // ── Apply button ──────────────────────────────────────────────────────────────
 
-export function ApplyButton({ href }: { href: string }) {
+export function ApplyButton({ href, onApply }: { href: string; onApply?: () => void }) {
   return (
     <a
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      onClick={e => e.stopPropagation()}
+      onClick={e => { e.stopPropagation(); onApply?.() }}
       className="shrink-0 inline-flex items-center gap-1.5 text-xs font-semibold
         px-3.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white
         transition-colors duration-150"
@@ -83,30 +82,47 @@ export function ApplyButton({ href }: { href: string }) {
 
 // ── JobCard ───────────────────────────────────────────────────────────────────
 
-export default function JobCard({ job }: { job: Job }) {
-  const [fav, setFav] = useState(false)
+interface Props {
+  job: Job
+  favorited?: boolean
+  applied?: boolean
+  onFavorite?: (jobId: number, favorited: boolean) => void
+  onCardClick?: () => void
+  onApply?: (jobId: number, title: string) => void
+}
+
+export default function JobCard({
+  job, favorited = false, applied = false, onFavorite, onCardClick, onApply,
+}: Props) {
   const salary = formatSalary(job.salaryMin, job.salaryMax)
 
-  return (
-    <article className="group flex flex-col bg-slate-900 border border-slate-800 rounded-2xl p-5 gap-3
-      transition-all duration-200 hover:border-indigo-500/30 hover:bg-slate-800/50
-      hover:shadow-xl hover:shadow-black/30 cursor-default">
+  function handleFavorite(e: React.MouseEvent) {
+    e.stopPropagation()
+    onFavorite?.(job.id, !favorited)
+  }
 
+  return (
+    <article
+      onClick={onCardClick}
+      className={`group flex flex-col bg-slate-900 border border-slate-800 rounded-2xl p-5 gap-3
+        transition-all duration-200 hover:border-indigo-500/30 hover:bg-slate-800/50
+        hover:shadow-xl hover:shadow-black/30 ${onCardClick ? 'cursor-pointer' : 'cursor-default'}`}
+    >
       {/* Row 1: Title + Favorite */}
       <div className="flex items-start gap-2">
         <h2 className="flex-1 text-slate-100 font-semibold text-[0.92rem] leading-snug line-clamp-2">
           {job.title}
         </h2>
         <button
-          onClick={e => { e.stopPropagation(); setFav(f => !f) }}
-          aria-label={fav ? 'Unfavorite' : 'Favorite'}
+          onClick={handleFavorite}
+          aria-label={favorited ? 'Unfavorite' : 'Favorite'}
           className={`shrink-0 w-7 h-7 flex items-center justify-center rounded-lg transition-colors
-            ${fav
+            ${favorited
               ? 'text-rose-400 bg-rose-500/10 hover:bg-rose-500/20'
               : 'text-slate-600 hover:text-rose-400 hover:bg-rose-500/10'
             }`}
         >
-          <svg className="w-4 h-4" viewBox="0 0 24 24" fill={fav ? 'currentColor' : 'none'} stroke="currentColor">
+          <svg className="w-4 h-4" viewBox="0 0 24 24" fill={favorited ? 'currentColor' : 'none'} stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
               d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
           </svg>
@@ -144,6 +160,11 @@ export default function JobCard({ job }: { job: Job }) {
         <span className="text-[0.65rem] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
           {job.source}
         </span>
+        {applied && (
+          <span className="text-[0.65rem] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+            Applied
+          </span>
+        )}
       </div>
 
       {/* Footer */}
@@ -156,7 +177,12 @@ export default function JobCard({ job }: { job: Job }) {
           )}
           <span className="text-xs text-slate-700 whitespace-nowrap">{timeAgo(job.postedDate)}</span>
         </div>
-        {job.applyUrl && <ApplyButton href={job.applyUrl} />}
+        {job.applyUrl && (
+          <ApplyButton
+            href={job.applyUrl}
+            onApply={onApply ? () => onApply(job.id, job.title) : undefined}
+          />
+        )}
       </div>
     </article>
   )

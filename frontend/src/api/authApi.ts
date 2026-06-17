@@ -37,6 +37,18 @@ export async function getMeApi(token: string): Promise<MeResponse> {
   return data
 }
 
+export async function changePasswordApi(
+  token: string,
+  currentPassword: string,
+  newPassword: string,
+): Promise<void> {
+  await authClient.post(
+    '/api/auth/change-password',
+    { currentPassword, newPassword },
+    { headers: { Authorization: `Bearer ${token}` } },
+  )
+}
+
 export function extractApiError(err: unknown): string {
   if (axios.isAxiosError(err)) {
     return err.response?.data?.error ?? err.message

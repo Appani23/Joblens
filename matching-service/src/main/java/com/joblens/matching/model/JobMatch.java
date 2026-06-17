@@ -32,4 +32,7 @@ public class JobMatch {
 
     private String jobLevel;
     private String workMode;
+
+    @Column(columnDefinition = "TEXT")
+    private String matchedSkills;
 }

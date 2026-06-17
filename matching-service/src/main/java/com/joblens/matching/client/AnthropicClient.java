@@ -31,15 +31,26 @@ public class AnthropicClient {
 
             TASK 1 — SCORE (0-100 integer):
             - SKILLS (~45%%): Overlap between the candidate's skills/tools and what the job requires or implies. Consider both explicit mentions and strong implications (e.g. Spring Boot implies Java).
-            - TITLE FIT (~30%%): How well the job title aligns with the candidate's background and target role based on their profile. Score relative to the CANDIDATE'S field, not a fixed template.
-            - EXPERIENCE FIT (~25%%): Candidate has %d years. If the job requires <= candidate years: full marks. 7–8 year requirement: small penalty (~5–10 pts). 9–12+ year "Expert/Architect" requirement: larger penalty (~15–25 pts). Never hard-reject on experience alone.
+            - TITLE FIT (~30%%): How well the job title aligns with the candidate's background and target role based on their profile.
+            - EXPERIENCE FIT (~25%%): Candidate has %d years. If the job requires <= candidate years: full marks. 7–8 year requirement: small penalty (~5–10 pts). 9–12+ year requirement: larger penalty (~15–25 pts). Never hard-reject on experience alone.
 
             TASK 2 — EXTRACT from the job description:
-            - workMode: "Remote" if fully remote/WFH, "Hybrid" if hybrid/flexible schedule, "Onsite" otherwise. Default "Onsite" if not mentioned.
-            - requiredYears: minimum years of experience explicitly required, as an integer. Use 0 if not stated.
+            - workMode: "Remote" if fully remote/WFH, "Hybrid" if hybrid/flexible schedule, "Onsite" otherwise.
+            - requiredYears: The minimum years of experience required. Extract carefully:
+              • Spelled-out numbers: "five years" = 5, "three to five years" → lower bound = 3
+              • Numeric ranges: "3-5 years" or "3 to 5 years" → lower bound = 3
+              • Months: "84 months" → 7, "60 months" → 5 (divide by 12, round to nearest integer)
+              • Key phrases: "minimum of X", "at least X years", "X+ years of experience", "X years required"
+              • If multiple mentions, use the primary required one; ignore "preferred" or "nice to have"
+              • Return 0 ONLY if absolutely no experience requirement is stated anywhere
+
+            TASK 3 — MATCHED SKILLS:
+            From the candidate's skills in the CANDIDATE PROFILE, list the ones directly relevant to this specific job.
+            Return as a JSON array of strings (max 8 items), using the exact skill names from the candidate's profile.
+            Return [] if no skills from the candidate profile match this job.
 
             Return ONLY valid JSON — no markdown fences, no extra text:
-            {"score": <integer 0-100>, "reasoning": "<one concise sentence>", "workMode": "<Remote|Hybrid|Onsite>", "requiredYears": <integer>}
+            {"score": <integer 0-100>, "reasoning": "<one concise sentence>", "workMode": "<Remote|Hybrid|Onsite>", "requiredYears": <integer>, "matchedSkills": [<strings>]}
             """;
 
     private final RestClient restClient;
@@ -66,7 +77,7 @@ public class AnthropicClient {
 
         var request = new MessagesRequest(
                 props.getModel(),
-                300,
+                500,
                 List.of(new Message("user", List.of(new ContentBlock("text", prompt))))
         );
 

@@ -33,6 +33,29 @@ export interface MatchResult {
   matchedAt: string
   jobLevel: string | null
   workMode: string | null
+  description: string | null
+  matchedSkills: string[] | null
+}
+
+export interface JobStatusEntry {
+  jobId: number
+  favorited: boolean
+  favoritedAt: string | null
+  applied: boolean
+  appliedAt: string | null
+  title: string
+  company: string | null
+  location: string | null
+  applyUrl: string | null
+  description: string | null
+  jobLevel: string | null
+  workMode: string | null
+  salaryMin: number | null
+  salaryMax: number | null
+  source: string | null
+  score: number | null
+  reasoning: string | null
+  matchedSkills: string[] | null
 }
 
 export async function getMyResume(token: string): Promise<ResumeInfo> {
@@ -43,7 +66,6 @@ export async function getMyResume(token: string): Promise<ResumeInfo> {
 export async function uploadResume(token: string, file: File): Promise<ResumeInfo> {
   const form = new FormData()
   form.append('file', file)
-  // Do NOT set Content-Type — axios/browser sets it with the multipart boundary
   const res = await resumeClient.post<ResumeInfo>('/api/resumes/upload', form, {
     headers: { Authorization: `Bearer ${token}` },
   })
@@ -51,7 +73,6 @@ export async function uploadResume(token: string, file: File): Promise<ResumeInf
 }
 
 export async function runMatching(token: string): Promise<MatchSummary> {
-  // Matching can take 1–5 minutes; set a generous timeout
   const res = await matchClient.post<MatchSummary>('/api/matches/run', null, {
     headers: auth(token),
     timeout: 600_000,
@@ -69,6 +90,21 @@ export async function getMyMatches(token: string, minScore = 0): Promise<MatchRe
 
 export async function clearMyMatches(token: string): Promise<void> {
   await matchClient.delete('/api/matches/me', { headers: auth(token) })
+}
+
+export async function getMyJobStatus(token: string): Promise<JobStatusEntry[]> {
+  const res = await matchClient.get<JobStatusEntry[]>('/api/jobs-status/me', {
+    headers: auth(token),
+  })
+  return res.data
+}
+
+export async function toggleFavorite(token: string, jobId: number, favorited: boolean): Promise<void> {
+  await matchClient.post('/api/jobs-status/favorite', { jobId, favorited }, { headers: auth(token) })
+}
+
+export async function toggleApplied(token: string, jobId: number, applied: boolean): Promise<void> {
+  await matchClient.post('/api/jobs-status/applied', { jobId, applied }, { headers: auth(token) })
 }
 
 export function extractMatchApiError(err: unknown): string {

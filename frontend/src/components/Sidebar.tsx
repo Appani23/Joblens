@@ -1,6 +1,6 @@
 import type { AuthUser } from '../context/AuthContext'
 
-export type View = 'all' | 'recommended' | 'resume'
+export type View = 'all' | 'recommended' | 'favorites' | 'applied' | 'resume' | 'settings'
 
 interface Props {
   active: View
@@ -10,8 +10,6 @@ interface Props {
   onLogin: () => void
   onLogout: () => void
 }
-
-// ── Icons (inline SVGs keep dependencies zero) ────────────────────────────────
 
 function IconBriefcase() {
   return (
@@ -27,6 +25,24 @@ function IconSparkle() {
     <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
         d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+    </svg>
+  )
+}
+
+function IconHeart() {
+  return (
+    <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
+        d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+    </svg>
+  )
+}
+
+function IconCheck() {
+  return (
+    <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
+        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
     </svg>
   )
 }
@@ -50,8 +66,6 @@ function IconCog() {
     </svg>
   )
 }
-
-// ── Nav item ──────────────────────────────────────────────────────────────────
 
 interface NavItemProps {
   icon: React.ReactNode
@@ -77,10 +91,12 @@ function NavItem({ icon, label, active, onClick }: NavItemProps) {
   )
 }
 
-// ── Sidebar ───────────────────────────────────────────────────────────────────
-
 export default function Sidebar({ active, user, restoring, onNavigate, onLogin, onLogout }: Props) {
   const avatar = user ? (user.name ?? user.email).charAt(0).toUpperCase() : null
+
+  function navOrLogin(view: View) {
+    return user ? () => onNavigate(view) : onLogin
+  }
 
   return (
     <aside className="w-16 md:w-60 h-screen shrink-0 flex flex-col border-r border-slate-800/60 bg-[#080b12]">
@@ -108,28 +124,37 @@ export default function Sidebar({ active, user, restoring, onNavigate, onLogin, 
           icon={<IconSparkle />}
           label="Recommended"
           active={active === 'recommended'}
-          onClick={() => user ? onNavigate('recommended') : onLogin()}
+          onClick={navOrLogin('recommended')}
+        />
+        <NavItem
+          icon={<IconHeart />}
+          label="Favorites"
+          active={active === 'favorites'}
+          onClick={navOrLogin('favorites')}
+        />
+        <NavItem
+          icon={<IconCheck />}
+          label="Applied"
+          active={active === 'applied'}
+          onClick={navOrLogin('applied')}
         />
         <NavItem
           icon={<IconDocument />}
           label="Resume"
           active={active === 'resume'}
-          onClick={() => user ? onNavigate('resume') : onLogin()}
+          onClick={navOrLogin('resume')}
         />
       </nav>
 
       {/* Bottom section */}
       <div className="shrink-0 px-2 md:px-3 pb-4 flex flex-col gap-1">
-        {/* Settings (no-op for now) */}
-        <button
-          className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-sm font-medium
-            text-slate-500 hover:text-slate-300 hover:bg-slate-800/60 transition-colors text-left"
-        >
-          <IconCog />
-          <span className="hidden md:block">Settings</span>
-        </button>
+        <NavItem
+          icon={<IconCog />}
+          label="Settings"
+          active={active === 'settings'}
+          onClick={navOrLogin('settings')}
+        />
 
-        {/* User */}
         {!restoring && (
           user ? (
             <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-slate-800/40 border border-slate-800/60">

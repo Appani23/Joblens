@@ -9,12 +9,15 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface JobMatchRepository extends JpaRepository<JobMatch, Long> {
 
     List<JobMatch> findByUserEmailAndScoreGreaterThanEqualOrderByScoreDesc(
             String userEmail, int minScore);
+
+    Optional<JobMatch> findByUserEmailAndJobId(String userEmail, Long jobId);
 
     @Modifying
     @Transactional

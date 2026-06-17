@@ -1,6 +1,7 @@
 package com.joblens.matching.dto;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 public record MatchResult(
         Long jobId,
@@ -12,5 +13,7 @@ public record MatchResult(
         String applyUrl,
         LocalDateTime matchedAt,
         String jobLevel,
-        String workMode
+        String workMode,
+        String description,
+        List<String> matchedSkills
 ) {}

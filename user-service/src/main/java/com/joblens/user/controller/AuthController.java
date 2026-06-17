@@ -1,6 +1,7 @@
 package com.joblens.user.controller;
 
 import com.joblens.user.dto.AuthResponse;
+import com.joblens.user.dto.ChangePasswordRequest;
 import com.joblens.user.dto.LoginRequest;
 import com.joblens.user.dto.SignupRequest;
 import com.joblens.user.dto.UserResponse;
@@ -70,5 +71,31 @@ public class AuthController {
         User user = userRepository.findByEmail(principal.getUsername())
                 .orElseThrow();
         return ResponseEntity.ok(new UserResponse(user.getEmail(), user.getName()));
+    }
+
+    @PostMapping("/change-password")
+    public ResponseEntity<?> changePassword(
+            @AuthenticationPrincipal UserDetails principal,
+            @RequestBody ChangePasswordRequest request) {
+
+        if (request.currentPassword() == null || request.newPassword() == null) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", "currentPassword and newPassword are required"));
+        }
+        if (request.newPassword().length() < 8) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", "New password must be at least 8 characters"));
+        }
+
+        User user = userRepository.findByEmail(principal.getUsername()).orElseThrow();
+
+        if (!passwordEncoder.matches(request.currentPassword(), user.getPassword())) {
+            return ResponseEntity.status(401)
+                    .body(Map.of("error", "Current password is incorrect"));
+        }
+
+        user.setPassword(passwordEncoder.encode(request.newPassword()));
+        userRepository.save(user);
+        return ResponseEntity.ok(Map.of("message", "Password updated successfully"));
     }
 }

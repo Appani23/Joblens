@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { fetchJobs } from '../api/api'
 import type { Job, PageResponse } from '../types/job'
+import { jobToPanel, type PanelItem } from '../types/panel'
 import { useDebounce } from '../hooks/useDebounce'
 import JobCard from '../components/JobCard'
 
@@ -138,6 +139,10 @@ interface Props {
   page: number
   onPageChange: (n: number) => void
   onClear: () => void
+  jobStatus: Record<number, { favorited: boolean; applied: boolean }>
+  onFavorite: (jobId: number, favorited: boolean) => void
+  onApply: (jobId: number, title: string) => void
+  onCardClick: (item: PanelItem) => void
 }
 
 const PAGE_SIZE = 20
@@ -145,6 +150,7 @@ const PAGE_SIZE = 20
 export default function AllJobsView({
   rawWhat, rawWhere, datePostedDays, sort, jobLevel, workMode,
   page, onPageChange, onClear,
+  jobStatus, onFavorite, onApply, onCardClick,
 }: Props) {
   const [result, setResult] = useState<PageResponse<Job> | null>(null)
   const [loading, setLoading] = useState(true)
@@ -153,7 +159,6 @@ export default function AllJobsView({
   const what = useDebounce(rawWhat, 400)
   const where = useDebounce(rawWhere, 400)
 
-  // Track previous filter key to detect filter changes (reset page handled by parent)
   const filterKey = `${what}|${where}|${datePostedDays}|${sort}|${jobLevel}|${workMode}`
   const prevFilterKey = useRef(filterKey)
   useEffect(() => { prevFilterKey.current = filterKey }, [filterKey])
@@ -186,7 +191,6 @@ export default function AllJobsView({
 
   return (
     <div>
-      {/* Heading */}
       <div className="mb-5 flex items-baseline justify-between gap-4">
         <h1 className="text-base font-bold text-white tracking-tight">
           {isFiltered ? 'Filtered results' : 'Latest Jobs'}
@@ -213,7 +217,17 @@ export default function AllJobsView({
           : (
             <>
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-                {result.content.map(job => <JobCard key={job.id} job={job} />)}
+                {result.content.map(job => (
+                  <JobCard
+                    key={job.id}
+                    job={job}
+                    favorited={jobStatus[job.id]?.favorited ?? false}
+                    applied={jobStatus[job.id]?.applied ?? false}
+                    onFavorite={onFavorite}
+                    onApply={onApply}
+                    onCardClick={() => onCardClick(jobToPanel(job))}
+                  />
+                ))}
               </div>
               <Pagination
                 page={result.number}

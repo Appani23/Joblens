@@ -4,14 +4,13 @@ import {
   extractMatchApiError,
   type ResumeInfo, type MatchResult, type MatchSummary,
 } from '../api/matchApi'
+import { matchToPanel, type PanelItem } from '../types/panel'
 import MatchCard from '../components/MatchCard'
 
 type ResumeStatus = 'checking' | 'none' | 'exists'
 type MatchStatus = 'idle' | 'loading' | 'running' | 'done' | 'error'
 type MinScore = 70 | 80 | 90
 const MIN_SCORE_OPTIONS: MinScore[] = [70, 80, 90]
-
-// ── Shared micro-components ───────────────────────────────────────────────────
 
 function Spinner({ label }: { label: string }) {
   return (
@@ -183,9 +182,16 @@ interface Props {
   rawWhere: string
   jobLevel: string
   workMode: string
+  jobStatus: Record<number, { favorited: boolean; applied: boolean }>
+  onFavorite: (jobId: number, favorited: boolean) => void
+  onApply: (jobId: number, title: string) => void
+  onCardClick: (item: PanelItem) => void
 }
 
-export default function RecommendedView({ token, rawWhat, rawWhere, jobLevel, workMode }: Props) {
+export default function RecommendedView({
+  token, rawWhat, rawWhere, jobLevel, workMode,
+  jobStatus, onFavorite, onApply, onCardClick,
+}: Props) {
   const [resumeStatus, setResumeStatus] = useState<ResumeStatus>('checking')
   const [resume, setResume] = useState<ResumeInfo | null>(null)
   const [uploading, setUploading] = useState(false)
@@ -198,7 +204,6 @@ export default function RecommendedView({ token, rawWhat, rawWhere, jobLevel, wo
   const [matchError, setMatchError] = useState<string | null>(null)
   const [minScore, setMinScore] = useState<MinScore>(70)
 
-  // Client-side filtering of loaded matches
   const displayedMatches = allMatches.filter(m => {
     if (m.score < minScore) return false
     if (rawWhat && !m.title.toLowerCase().includes(rawWhat.toLowerCase())) return false
@@ -299,7 +304,6 @@ export default function RecommendedView({ token, rawWhat, rawWhere, jobLevel, wo
 
       {matchStatus === 'done' && (
         <>
-          {/* Results header */}
           <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
             <div className="flex items-baseline gap-3">
               <h2 className="text-base font-bold text-white tracking-tight">Recommended</h2>
@@ -337,7 +341,17 @@ export default function RecommendedView({ token, rawWhat, rawWhere, jobLevel, wo
             ? <EmptyMatches minScore={minScore} onLower={lowerMinScore} />
             : (
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-                {displayedMatches.map(m => <MatchCard key={m.jobId} match={m} />)}
+                {displayedMatches.map(m => (
+                  <MatchCard
+                    key={m.jobId}
+                    match={m}
+                    favorited={jobStatus[m.jobId]?.favorited ?? false}
+                    applied={jobStatus[m.jobId]?.applied ?? false}
+                    onFavorite={onFavorite}
+                    onApply={onApply}
+                    onCardClick={() => onCardClick(matchToPanel(m))}
+                  />
+                ))}
               </div>
             )
           }

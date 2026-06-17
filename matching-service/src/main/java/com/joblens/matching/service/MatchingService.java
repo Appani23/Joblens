@@ -1,5 +1,6 @@
 package com.joblens.matching.service;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.joblens.matching.client.AnthropicClient;
@@ -16,6 +17,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
@@ -33,12 +35,6 @@ public class MatchingService {
     private final ObjectMapper objectMapper;
     private final ExecutorService scoringPool;
 
-    /**
-     * Scores every job against the user's most-recent parsed resume.
-     * Deletes stale scores first so each run is idempotent — no duplicates accumulate.
-     * Also writes jobLevel/workMode/requiredYears back to the jobs table so
-     * GET /api/jobs can filter and display these attributes.
-     */
     public MatchSummary runForUser(String userEmail) {
         Resume resume = resumeRepository.findTopByUserEmailOrderByUploadedAtDesc(userEmail)
                 .orElseThrow(() -> new IllegalStateException("No resume found — upload one first"));
@@ -95,7 +91,9 @@ public class MatchingService {
                     job != null ? job.getApplyUrl() : null,
                     m.getMatchedAt(),
                     m.getJobLevel(),
-                    m.getWorkMode()
+                    m.getWorkMode(),
+                    job != null ? job.getDescription() : null,
+                    parseMatchedSkills(m.getMatchedSkills())
             );
         }).toList();
     }
@@ -127,8 +125,13 @@ public class MatchingService {
             Integer requiredYears = reqYearsInt > 0 ? reqYearsInt : null;
             String jobLevel = computeJobLevel(requiredYears);
 
-            // Write inferred attributes back to the jobs table (shared DB with job-aggregator)
-            // so GET /api/jobs can filter and display them without a separate scoring step.
+            List<String> matchedSkillsList = new ArrayList<>();
+            JsonNode skillsNode = node.path("matchedSkills");
+            if (skillsNode.isArray()) {
+                skillsNode.forEach(s -> matchedSkillsList.add(s.asText()));
+            }
+            String matchedSkillsJson = objectMapper.writeValueAsString(matchedSkillsList);
+
             job.setJobLevel(jobLevel);
             job.setWorkMode(workMode);
             job.setRequiredYears(requiredYears);
@@ -141,6 +144,7 @@ public class MatchingService {
             match.setReasoning(reasoning);
             match.setJobLevel(jobLevel);
             match.setWorkMode(workMode);
+            match.setMatchedSkills(matchedSkillsJson);
             match.setMatchedAt(LocalDateTime.now());
             jobMatchRepository.save(match);
 
@@ -155,8 +159,8 @@ public class MatchingService {
     }
 
     private static String computeJobLevel(Integer requiredYears) {
-        if (requiredYears == null) return null;
-        if (requiredYears < 5) return "Junior";
+        if (requiredYears == null) return "Mid";
+        if (requiredYears <= 5) return "Junior";
         if (requiredYears <= 8) return "Mid";
         return "Senior";
     }
@@ -168,6 +172,15 @@ public class MatchingService {
             case "Hybrid" -> "Hybrid";
             default -> "Onsite";
         };
+    }
+
+    private List<String> parseMatchedSkills(String json) {
+        if (json == null || json.isBlank()) return List.of();
+        try {
+            return objectMapper.readValue(json, new TypeReference<List<String>>() {});
+        } catch (Exception e) {
+            return List.of();
+        }
     }
 
     private int extractYearsExperience(String parsedJson) {
