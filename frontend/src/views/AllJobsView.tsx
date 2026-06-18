@@ -133,9 +133,9 @@ interface Props {
   rawWhat: string
   rawWhere: string
   datePostedDays: number | undefined
-  sort: 'recent' | 'relevance'
-  jobLevel: string
-  workMode: string
+  sort: 'recent' | 'relevance' | 'salary'
+  jobLevels: string[]
+  workModes: string[]
   page: number
   onPageChange: (n: number) => void
   onClear: () => void
@@ -148,7 +148,7 @@ interface Props {
 const PAGE_SIZE = 20
 
 export default function AllJobsView({
-  rawWhat, rawWhere, datePostedDays, sort, jobLevel, workMode,
+  rawWhat, rawWhere, datePostedDays, sort, jobLevels, workModes,
   page, onPageChange, onClear,
   jobStatus, onFavorite, onApply, onCardClick,
 }: Props) {
@@ -159,7 +159,7 @@ export default function AllJobsView({
   const what = useDebounce(rawWhat, 400)
   const where = useDebounce(rawWhere, 400)
 
-  const filterKey = `${what}|${where}|${datePostedDays}|${sort}|${jobLevel}|${workMode}`
+  const filterKey = `${what}|${where}|${datePostedDays}|${sort}|${jobLevels.join(',')}|${workModes.join(',')}`
   const prevFilterKey = useRef(filterKey)
   useEffect(() => { prevFilterKey.current = filterKey }, [filterKey])
 
@@ -172,8 +172,8 @@ export default function AllJobsView({
       where: where || undefined,
       datePostedDays,
       sort,
-      jobLevel: jobLevel || undefined,
-      workMode: workMode || undefined,
+      jobLevel: jobLevels.length > 0 ? jobLevels : undefined,
+      workMode: workModes.length > 0 ? workModes : undefined,
       page,
       size: PAGE_SIZE,
     })
@@ -183,11 +183,11 @@ export default function AllJobsView({
       })
       .finally(() => { if (!cancelled) setLoading(false) })
     return () => { cancelled = true }
-  }, [what, where, datePostedDays, sort, jobLevel, workMode, page])
+  }, [what, where, datePostedDays, sort, jobLevels, workModes, page])
 
   const isFiltered =
     rawWhat !== '' || rawWhere !== '' || datePostedDays !== undefined ||
-    sort !== 'recent' || jobLevel !== '' || workMode !== ''
+    sort !== 'recent' || jobLevels.length > 0 || workModes.length > 0
 
   return (
     <div>
@@ -204,7 +204,7 @@ export default function AllJobsView({
       </div>
 
       {loading && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)}
         </div>
       )}
@@ -216,7 +216,7 @@ export default function AllJobsView({
           ? <EmptyState isFiltered={isFiltered} onClear={onClear} />
           : (
             <>
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 {result.content.map(job => (
                   <JobCard
                     key={job.id}

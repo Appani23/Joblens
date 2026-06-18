@@ -8,9 +8,9 @@ export interface JobSearchParams {
   where?: string
   company?: string
   datePostedDays?: number
-  jobLevel?: string
-  workMode?: string
-  sort?: 'recent' | 'relevance'
+  jobLevel?: string[]
+  workMode?: string[]
+  sort?: 'recent' | 'relevance' | 'salary'
   page?: number
   size?: number
 }

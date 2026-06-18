@@ -1,4 +1,5 @@
 import type { AuthUser } from '../context/AuthContext'
+import { Logo, LogoWordmark } from './Logo'
 
 export type View = 'all' | 'recommended' | 'favorites' | 'applied' | 'resume' | 'settings'
 
@@ -102,14 +103,13 @@ export default function Sidebar({ active, user, restoring, onNavigate, onLogin, 
     <aside className="w-16 md:w-60 h-screen shrink-0 flex flex-col border-r border-slate-800/60 bg-[#080b12]">
 
       {/* Logo */}
-      <div className="h-14 flex items-center gap-2.5 px-3 md:px-4 border-b border-slate-800/60 shrink-0">
-        <div className="w-8 h-8 rounded-xl bg-indigo-600 flex items-center justify-center shrink-0">
-          <svg className="w-4.5 h-4.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5}
-              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
+      <div className="h-16 flex items-center px-3 md:px-4 border-b border-slate-800/60 shrink-0">
+        <div className="hidden md:flex">
+          <LogoWordmark size="md" />
         </div>
-        <span className="hidden md:block text-base font-bold tracking-tight text-white">JobLens</span>
+        <div className="md:hidden">
+          <Logo size="sm" />
+        </div>
       </div>
 
       {/* Primary nav */}

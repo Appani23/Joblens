@@ -93,7 +93,9 @@ public class MatchingService {
                     m.getJobLevel(),
                     m.getWorkMode(),
                     job != null ? job.getDescription() : null,
-                    parseMatchedSkills(m.getMatchedSkills())
+                    parseMatchedSkills(m.getMatchedSkills()),
+                    job != null ? job.getSalaryMin() : null,
+                    job != null ? job.getSalaryMax() : null
             );
         }).toList();
     }

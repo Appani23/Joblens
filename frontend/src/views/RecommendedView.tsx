@@ -9,8 +9,6 @@ import MatchCard from '../components/MatchCard'
 
 type ResumeStatus = 'checking' | 'none' | 'exists'
 type MatchStatus = 'idle' | 'loading' | 'running' | 'done' | 'error'
-type MinScore = 70 | 80 | 90
-const MIN_SCORE_OPTIONS: MinScore[] = [70, 80, 90]
 
 function Spinner({ label }: { label: string }) {
   return (
@@ -152,7 +150,7 @@ function ErrorCard({ message, onRetry }: { message: string; onRetry: () => void 
   )
 }
 
-function EmptyMatches({ minScore, onLower }: { minScore: MinScore; onLower: () => void }) {
+function EmptyMatches({ minScore }: { minScore: number }) {
   return (
     <div className="flex flex-col items-center justify-center py-20 gap-4 text-center">
       <div className="w-12 h-12 rounded-full bg-slate-800 flex items-center justify-center">
@@ -161,15 +159,7 @@ function EmptyMatches({ minScore, onLower }: { minScore: MinScore; onLower: () =
             d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
         </svg>
       </div>
-      <div>
-        <p className="text-slate-300 font-semibold mb-1">No matches above {minScore}%</p>
-        {minScore > 70 && (
-          <button onClick={onLower}
-            className="text-sm text-indigo-400 hover:text-indigo-300 bg-indigo-500/10 hover:bg-indigo-500/20 px-4 py-2 rounded-lg transition-colors mt-3">
-            Show {minScore - 10}%+ matches
-          </button>
-        )}
-      </div>
+      <p className="text-slate-300 font-semibold mb-1">No matches above {minScore}%</p>
     </div>
   )
 }
@@ -180,8 +170,10 @@ interface Props {
   token: string
   rawWhat: string
   rawWhere: string
-  jobLevel: string
-  workMode: string
+  jobLevels: string[]
+  workModes: string[]
+  sort: 'recent' | 'relevance' | 'salary'
+  minScore: number
   jobStatus: Record<number, { favorited: boolean; applied: boolean }>
   onFavorite: (jobId: number, favorited: boolean) => void
   onApply: (jobId: number, title: string) => void
@@ -189,7 +181,7 @@ interface Props {
 }
 
 export default function RecommendedView({
-  token, rawWhat, rawWhere, jobLevel, workMode,
+  token, rawWhat, rawWhere, jobLevels, workModes, sort, minScore,
   jobStatus, onFavorite, onApply, onCardClick,
 }: Props) {
   const [resumeStatus, setResumeStatus] = useState<ResumeStatus>('checking')
@@ -202,14 +194,19 @@ export default function RecommendedView({
   const [allMatches, setAllMatches] = useState<MatchResult[]>([])
   const [runSummary, setRunSummary] = useState<MatchSummary | null>(null)
   const [matchError, setMatchError] = useState<string | null>(null)
-  const [minScore, setMinScore] = useState<MinScore>(70)
 
-  const displayedMatches = allMatches.filter(m => {
+  const sortedMatches = [...allMatches].sort((a, b) => {
+    if (sort === 'relevance') return b.score - a.score
+    if (sort === 'salary') return (b.salaryMax ?? -Infinity) - (a.salaryMax ?? -Infinity)
+    return 0
+  })
+
+  const displayedMatches = sortedMatches.filter(m => {
     if (m.score < minScore) return false
     if (rawWhat && !m.title.toLowerCase().includes(rawWhat.toLowerCase())) return false
     if (rawWhere && !m.location?.toLowerCase().includes(rawWhere.toLowerCase())) return false
-    if (jobLevel && m.jobLevel !== jobLevel) return false
-    if (workMode && m.workMode !== workMode) return false
+    if (jobLevels.length > 0 && !jobLevels.includes(m.jobLevel ?? '')) return false
+    if (workModes.length > 0 && !workModes.includes(m.workMode ?? '')) return false
     return true
   })
 
@@ -272,11 +269,6 @@ export default function RecommendedView({
     }
   }
 
-  function lowerMinScore() {
-    const idx = MIN_SCORE_OPTIONS.indexOf(minScore)
-    if (idx > 0) setMinScore(MIN_SCORE_OPTIONS[idx - 1])
-  }
-
   const fileInput = (
     <input ref={fileInputRef} type="file" accept=".pdf" className="hidden" onChange={handleFileChange} />
   )
@@ -312,35 +304,19 @@ export default function RecommendedView({
                 {runSummary && <> · {runSummary.scored.toLocaleString()} jobs scored</>}
               </span>
             </div>
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2">
-                <label htmlFor="minScore" className="text-xs text-slate-500 whitespace-nowrap">
-                  Min score
-                </label>
-                <select
-                  id="minScore"
-                  value={minScore}
-                  onChange={e => setMinScore(Number(e.target.value) as MinScore)}
-                  className="text-xs text-slate-300 bg-slate-900 border border-slate-800 rounded-lg px-2 py-1.5
-                    focus:outline-none focus:border-indigo-500/50 transition-colors"
-                >
-                  {MIN_SCORE_OPTIONS.map(s => <option key={s} value={s}>{s}%+</option>)}
-                </select>
-              </div>
-              <button
-                onClick={handleRun}
-                className="text-xs font-medium text-slate-500 hover:text-slate-300 border border-slate-800
-                  hover:border-slate-700 bg-slate-900 px-3 py-1.5 rounded-lg transition-colors"
-              >
-                Re-score
-              </button>
-            </div>
+            <button
+              onClick={handleRun}
+              className="text-xs font-medium text-slate-500 hover:text-slate-300 border border-slate-800
+                hover:border-slate-700 bg-slate-900 px-3 py-1.5 rounded-lg transition-colors"
+            >
+              Re-score
+            </button>
           </div>
 
           {displayedMatches.length === 0
-            ? <EmptyMatches minScore={minScore} onLower={lowerMinScore} />
+            ? <EmptyMatches minScore={minScore} />
             : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 {displayedMatches.map(m => (
                   <MatchCard
                     key={m.jobId}

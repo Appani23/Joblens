@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import Sidebar, { type View } from './components/Sidebar'
-import FilterBar from './components/FilterBar'
+import SearchBar from './components/SearchBar'
 import AuthModal from './components/AuthModal'
 import JobDetailPanel from './components/JobDetailPanel'
 import AllJobsView from './views/AllJobsView'
@@ -13,25 +13,13 @@ import { useAuth } from './context/AuthContext'
 import { useToast } from './context/ToastContext'
 import { getMyJobStatus, toggleFavorite, toggleApplied } from './api/matchApi'
 import type { PanelItem } from './types/panel'
+import type { DrawerFilters } from './types/filters'
+import { DEFAULT_FILTER } from './types/filters'
+import type { FilterState } from './types/filters'
 
 // ── Per-view filter state ─────────────────────────────────────────────────────
 
 type FilterableView = 'all' | 'recommended' | 'favorites' | 'applied'
-
-interface FilterState {
-  rawWhat: string
-  rawWhere: string
-  datePostedDays: number | undefined
-  sort: 'recent' | 'relevance'
-  jobLevel: string
-  workMode: string
-  page: number
-}
-
-const DEFAULT_FILTER: FilterState = {
-  rawWhat: '', rawWhere: '', datePostedDays: undefined,
-  sort: 'recent', jobLevel: '', workMode: '', page: 0,
-}
 
 function isFilterable(v: View): v is FilterableView {
   return v === 'all' || v === 'recommended' || v === 'favorites' || v === 'applied'
@@ -73,14 +61,27 @@ export default function App() {
   })
 
   const currentFilters: FilterState =
-    isFilterable(activeView) ? viewFilters[activeView] : DEFAULT_FILTER
+    isFilterable(activeView) ? viewFilters[activeView] : { ...DEFAULT_FILTER }
 
   function updateFilter(updates: Partial<FilterState>) {
     if (!isFilterable(activeView)) return
     setViewFilters(prev => ({
       ...prev,
-      [activeView]: { ...prev[activeView], ...updates, page: 0 },
+      [activeView]: { ...prev[activeView], ...updates },
     }))
+  }
+
+  function applyDrawerFilters(f: DrawerFilters) {
+    if (!isFilterable(activeView)) return
+    setViewFilters(prev => ({
+      ...prev,
+      [activeView]: { ...prev[activeView], ...f, page: 0 },
+    }))
+  }
+
+  function clearAll() {
+    if (!isFilterable(activeView)) return
+    setViewFilters(prev => ({ ...prev, [activeView]: { ...DEFAULT_FILTER } }))
   }
 
   function setPage(page: number) {
@@ -91,13 +92,10 @@ export default function App() {
     }))
   }
 
-  function clearFilters() {
-    if (!isFilterable(activeView)) return
-    setViewFilters(prev => ({ ...prev, [activeView]: { ...DEFAULT_FILTER } }))
-  }
+  const { rawWhat, rawWhere, datePostedDays, jobLevels, workModes, sort, minScore, page } =
+    currentFilters
 
-  const showFilters = isFilterable(activeView)
-  const { rawWhat, rawWhere, datePostedDays, sort, jobLevel, workMode, page } = currentFilters
+  const appliedDrawer: DrawerFilters = { datePostedDays, jobLevels, workModes, minScore }
 
   // ── Job status (favorites / applied) ─────────────────────────────────────────
   const [jobStatus, setJobStatus] = useState<Record<number, { favorited: boolean; applied: boolean }>>({})
@@ -191,12 +189,23 @@ export default function App() {
     )
   }
 
-  // ── Shared status props ───────────────────────────────────────────────────────
   const statusProps = {
     jobStatus,
     onFavorite: handleFavorite,
     onApply: handleApply,
     onCardClick: setPanelItem,
+  }
+
+  const searchBarProps = {
+    rawWhat,
+    rawWhere,
+    onWhatChange:    (v: string) => updateFilter({ rawWhat: v, page: 0 }),
+    onWhereChange:   (v: string) => updateFilter({ rawWhere: v, page: 0 }),
+    sort,
+    onSortChange:    (v: FilterState['sort']) => updateFilter({ sort: v, page: 0 }),
+    applied:         appliedDrawer,
+    onApplyDrawer:   applyDrawerFilters,
+    onClearAll:      clearAll,
   }
 
   return (
@@ -212,59 +221,33 @@ export default function App() {
       />
 
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-
-        {showFilters && (
-          <FilterBar
-            what={rawWhat}
-            where={rawWhere}
-            datePostedDays={datePostedDays}
-            sort={sort}
-            jobLevel={jobLevel}
-            workMode={workMode}
-            onWhatChange={v => updateFilter({ rawWhat: v })}
-            onWhereChange={v => updateFilter({ rawWhere: v })}
-            onDatePostedDaysChange={v => updateFilter({ datePostedDays: v })}
-            onSortChange={v => updateFilter({ sort: v })}
-            onJobLevelChange={v => updateFilter({ jobLevel: v })}
-            onWorkModeChange={v => updateFilter({ workMode: v })}
-            onClear={clearFilters}
-          />
-        )}
-
-        {activeView === 'resume' && (
-          <div className="h-14 flex items-center px-6 border-b border-slate-800/60 shrink-0">
-            <span className="text-sm text-slate-500">Resume</span>
-          </div>
-        )}
-
         <main className="flex-1 overflow-y-auto px-6 py-6">
 
           {activeView === 'all' && (
-            <AllJobsView
-              rawWhat={rawWhat}
-              rawWhere={rawWhere}
-              datePostedDays={datePostedDays}
-              sort={sort}
-              jobLevel={jobLevel}
-              workMode={workMode}
-              page={page}
-              onPageChange={setPage}
-              onClear={clearFilters}
-              {...statusProps}
-            />
+            <>
+              <SearchBar {...searchBarProps} showMinScore={false} />
+              <AllJobsView
+                rawWhat={rawWhat} rawWhere={rawWhere} datePostedDays={datePostedDays}
+                sort={sort} jobLevels={jobLevels} workModes={workModes}
+                page={page} onPageChange={setPage} onClear={clearAll}
+                {...statusProps}
+              />
+            </>
           )}
 
           {activeView === 'recommended' && (
             user && token
               ? (
-                <RecommendedView
-                  token={token}
-                  rawWhat={rawWhat}
-                  rawWhere={rawWhere}
-                  jobLevel={jobLevel}
-                  workMode={workMode}
-                  {...statusProps}
-                />
+                <>
+                  <SearchBar {...searchBarProps} showMinScore={true} />
+                  <RecommendedView
+                    token={token}
+                    rawWhat={rawWhat} rawWhere={rawWhere}
+                    jobLevels={jobLevels} workModes={workModes}
+                    sort={sort} minScore={minScore}
+                    {...statusProps}
+                  />
+                </>
               )
               : <LoginPrompt />
           )}
@@ -272,16 +255,15 @@ export default function App() {
           {activeView === 'favorites' && (
             user && token
               ? (
-                <FavoritesView
-                  token={token}
-                  rawWhat={rawWhat}
-                  rawWhere={rawWhere}
-                  jobLevel={jobLevel}
-                  workMode={workMode}
-                  onFavorite={handleFavorite}
-                  onApply={handleApply}
-                  onCardClick={setPanelItem}
-                />
+                <>
+                  <SearchBar {...searchBarProps} showMinScore={false} />
+                  <FavoritesView
+                    token={token}
+                    rawWhat={rawWhat} rawWhere={rawWhere}
+                    jobLevels={jobLevels} workModes={workModes} sort={sort}
+                    onFavorite={handleFavorite} onApply={handleApply} onCardClick={setPanelItem}
+                  />
+                </>
               )
               : <LoginPrompt />
           )}
@@ -289,24 +271,21 @@ export default function App() {
           {activeView === 'applied' && (
             user && token
               ? (
-                <AppliedView
-                  token={token}
-                  rawWhat={rawWhat}
-                  rawWhere={rawWhere}
-                  jobLevel={jobLevel}
-                  workMode={workMode}
-                  onFavorite={handleFavorite}
-                  onApply={handleApply}
-                  onCardClick={setPanelItem}
-                />
+                <>
+                  <SearchBar {...searchBarProps} showMinScore={false} />
+                  <AppliedView
+                    token={token}
+                    rawWhat={rawWhat} rawWhere={rawWhere}
+                    jobLevels={jobLevels} workModes={workModes} sort={sort}
+                    onFavorite={handleFavorite} onApply={handleApply} onCardClick={setPanelItem}
+                  />
+                </>
               )
               : <LoginPrompt />
           )}
 
           {activeView === 'resume' && (
-            user && token
-              ? <ResumeView token={token} />
-              : <LoginPrompt />
+            user && token ? <ResumeView token={token} /> : <LoginPrompt />
           )}
 
           {activeView === 'settings' && (

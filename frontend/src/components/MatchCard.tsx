@@ -46,14 +46,14 @@ export default function MatchCard({
         <button
           onClick={handleFavorite}
           aria-label={favorited ? 'Unfavorite' : 'Favorite'}
-          className={`shrink-0 w-7 h-7 flex items-center justify-center rounded-lg transition-colors
+          className={`shrink-0 w-9 h-9 flex items-center justify-center rounded-xl transition-colors
             ${favorited
-              ? 'text-rose-400 bg-rose-500/10 hover:bg-rose-500/20'
-              : 'text-slate-600 hover:text-rose-400 hover:bg-rose-500/10'
+              ? 'text-rose-400 bg-rose-500/15 hover:bg-rose-500/25'
+              : 'text-slate-500 hover:text-rose-400 hover:bg-rose-500/10'
             }`}
         >
-          <svg className="w-4 h-4" viewBox="0 0 24 24" fill={favorited ? 'currentColor' : 'none'} stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+          <svg className="w-6 h-6" viewBox="0 0 24 24" fill={favorited ? 'currentColor' : 'none'} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
               d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
           </svg>
         </button>
@@ -103,7 +103,7 @@ export default function MatchCard({
 
       {/* Footer */}
       <div className="flex items-center justify-between gap-2 mt-auto pt-3 border-t border-slate-800/80">
-        <span className="text-xs text-slate-700 whitespace-nowrap">
+        <span className="text-xs text-slate-500 whitespace-nowrap">
           Matched {timeAgo(match.matchedAt)}
         </span>
         {match.applyUrl && (

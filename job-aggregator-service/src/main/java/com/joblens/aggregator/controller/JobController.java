@@ -8,6 +8,7 @@ import com.joblens.aggregator.specification.JobSpecification;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import java.util.List;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
@@ -34,8 +35,8 @@ public class JobController {
             @RequestParam(required = false) String where,
             @RequestParam(required = false) String company,
             @RequestParam(required = false) Integer datePostedDays,
-            @RequestParam(required = false) String jobLevel,
-            @RequestParam(required = false) String workMode,
+            @RequestParam(required = false) List<String> jobLevel,
+            @RequestParam(required = false) List<String> workMode,
             @RequestParam(defaultValue = "recent") String sort,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
@@ -47,9 +48,16 @@ public class JobController {
     }
 
     private Sort resolveSort(String sort) {
-        return Sort.by(
-                Sort.Order.desc("postedDate"),
-                Sort.Order.desc("id")
-        );
+        return switch (sort) {
+            case "salary" -> Sort.by(
+                    new Sort.Order(Sort.Direction.DESC, "salaryMax", Sort.NullHandling.NULLS_LAST),
+                    Sort.Order.desc("postedDate"),
+                    Sort.Order.desc("id")
+            );
+            default -> Sort.by(
+                    Sort.Order.desc("postedDate"),
+                    Sort.Order.desc("id")
+            );
+        };
     }
 }

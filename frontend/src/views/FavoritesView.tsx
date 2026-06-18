@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { getMyJobStatus, extractMatchApiError, type JobStatusEntry } from '../api/matchApi'
 import { statusToPanel, type PanelItem } from '../types/panel'
-import { LevelPill, WorkModePill, ApplyButton, formatSalary, timeAgo } from '../components/JobCard'
+import { LevelPill, WorkModePill, ApplyButton, formatSalary } from '../components/JobCard'
 
 function Spinner() {
   return (
@@ -46,11 +46,11 @@ function StatusCard({
         <button
           onClick={e => { e.stopPropagation(); onFavorite(entry.jobId, !entry.favorited) }}
           aria-label="Unfavorite"
-          className="shrink-0 w-7 h-7 flex items-center justify-center rounded-lg transition-colors
-            text-rose-400 bg-rose-500/10 hover:bg-rose-500/20"
+          className="shrink-0 w-9 h-9 flex items-center justify-center rounded-xl transition-colors
+            text-rose-400 bg-rose-500/15 hover:bg-rose-500/25"
         >
-          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+          <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
               d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
           </svg>
         </button>
@@ -99,15 +99,16 @@ interface Props {
   token: string
   rawWhat: string
   rawWhere: string
-  jobLevel: string
-  workMode: string
+  jobLevels: string[]
+  workModes: string[]
+  sort: 'recent' | 'relevance' | 'salary'
   onFavorite: (jobId: number, favorited: boolean) => void
   onApply: (jobId: number, title: string) => void
   onCardClick: (item: PanelItem) => void
 }
 
 export default function FavoritesView({
-  token, rawWhat, rawWhere, jobLevel, workMode, onFavorite, onApply, onCardClick,
+  token, rawWhat, rawWhere, jobLevels, workModes, sort, onFavorite, onApply, onCardClick,
 }: Props) {
   const [entries, setEntries] = useState<JobStatusEntry[]>([])
   const [loading, setLoading] = useState(true)
@@ -129,12 +130,18 @@ export default function FavoritesView({
 
   const favorites = entries.filter(e => e.favorited)
 
-  const displayed = favorites.filter(e => {
+  const filtered = favorites.filter(e => {
     if (rawWhat && !e.title.toLowerCase().includes(rawWhat.toLowerCase())) return false
     if (rawWhere && !e.location?.toLowerCase().includes(rawWhere.toLowerCase())) return false
-    if (jobLevel && e.jobLevel !== jobLevel) return false
-    if (workMode && e.workMode !== workMode) return false
+    if (jobLevels.length > 0 && !jobLevels.includes(e.jobLevel ?? '')) return false
+    if (workModes.length > 0 && !workModes.includes(e.workMode ?? '')) return false
     return true
+  })
+
+  const displayed = [...filtered].sort((a, b) => {
+    if (sort === 'relevance') return (b.score ?? -Infinity) - (a.score ?? -Infinity)
+    if (sort === 'salary') return (b.salaryMax ?? -Infinity) - (a.salaryMax ?? -Infinity)
+    return (b.favoritedAt ?? '').localeCompare(a.favoritedAt ?? '')
   })
 
   if (loading) return <Spinner />
@@ -176,7 +183,7 @@ export default function FavoritesView({
       {displayed.length === 0 ? (
         <p className="text-slate-500 text-sm text-center py-20">No favorites match current filters.</p>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {displayed.map(e => (
             <StatusCard
               key={e.jobId}

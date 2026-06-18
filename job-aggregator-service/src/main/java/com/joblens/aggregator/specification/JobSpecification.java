@@ -17,8 +17,8 @@ public final class JobSpecification {
             String where,
             String company,
             Integer datePostedDays,
-            String jobLevel,
-            String workMode) {
+            List<String> jobLevel,
+            List<String> workMode) {
 
         return (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
@@ -46,12 +46,12 @@ public final class JobSpecification {
                 predicates.add(cb.greaterThanOrEqualTo(root.get("postedDate"), cutoff));
             }
 
-            if (jobLevel != null && !jobLevel.isBlank()) {
-                predicates.add(cb.equal(root.get("jobLevel"), jobLevel));
+            if (jobLevel != null && !jobLevel.isEmpty()) {
+                predicates.add(root.get("jobLevel").in(jobLevel));
             }
 
-            if (workMode != null && !workMode.isBlank()) {
-                predicates.add(cb.equal(root.get("workMode"), workMode));
+            if (workMode != null && !workMode.isEmpty()) {
+                predicates.add(root.get("workMode").in(workMode));
             }
 
             return cb.and(predicates.toArray(new Predicate[0]));

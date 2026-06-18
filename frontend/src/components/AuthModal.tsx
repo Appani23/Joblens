@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
 import { extractApiError } from '../api/authApi'
+import { LogoWordmark } from './Logo'
 
 interface AuthModalProps {
   isOpen: boolean
@@ -141,27 +142,33 @@ export default function AuthModal({ isOpen, initialMode, onClose }: AuthModalPro
         <div className="h-px bg-gradient-to-r from-transparent via-indigo-500 to-transparent" />
 
         <div className="p-6">
-          {/* Header row */}
-          <div className="flex items-start justify-between mb-6">
-            <div>
-              <h2 className="text-lg font-bold text-white">
-                {mode === 'login' ? 'Welcome back' : 'Create account'}
-              </h2>
-              <p className="text-sm text-slate-500 mt-0.5">
-                {mode === 'login'
-                  ? 'Sign in to your JobLens account'
-                  : 'Join JobLens — find your next role'}
-              </p>
-            </div>
+          {/* Header */}
+          <div className="relative mb-6">
+            {/* Close button */}
             <button
               onClick={onClose}
-              className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-600 hover:text-slate-300 hover:bg-slate-800 transition-colors"
+              className="absolute top-0 right-0 w-8 h-8 flex items-center justify-center rounded-lg text-slate-600 hover:text-slate-300 hover:bg-slate-800 transition-colors"
               aria-label="Close"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
+
+            {/* Centered logo + title */}
+            <div className="flex flex-col items-center gap-4 pr-6">
+              <LogoWordmark size="md" />
+              <div className="text-center">
+                <h2 className="text-lg font-bold text-white">
+                  {mode === 'login' ? 'Welcome back' : 'Create account'}
+                </h2>
+                <p className="text-sm text-slate-500 mt-0.5">
+                  {mode === 'login'
+                    ? 'Sign in to your account'
+                    : 'Join JobLens — find your next role'}
+                </p>
+              </div>
+            </div>
           </div>
 
           <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-3">

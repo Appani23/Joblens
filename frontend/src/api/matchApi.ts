@@ -35,6 +35,8 @@ export interface MatchResult {
   workMode: string | null
   description: string | null
   matchedSkills: string[] | null
+  salaryMin: number | null
+  salaryMax: number | null
 }
 
 export interface JobStatusEntry {

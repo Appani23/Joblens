@@ -15,5 +15,7 @@ public record MatchResult(
         String jobLevel,
         String workMode,
         String description,
-        List<String> matchedSkills
+        List<String> matchedSkills,
+        Double salaryMin,
+        Double salaryMax
 ) {}
