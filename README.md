@@ -23,7 +23,6 @@ The backend is a five-service Spring Boot 3.3 monorepo (Java 17, Maven multi-mod
 
 ## Screenshots
 
-> Add your own screenshots to `docs/screenshots/` — see the [reminder at the bottom](#-author).
 
 ![Landing Page](docs/screenshots/landing.png)
 *Marketing landing page with hero search, how-it-works walkthrough, and powered-by strip*
