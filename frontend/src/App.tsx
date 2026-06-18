@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from './context/AuthContext'
 import AppLayout from './AppLayout'
 import LandingPage from './views/LandingPage'
+import ResetPasswordPage from './views/ResetPasswordPage'
 
 function Spinner() {
   return (
@@ -21,6 +22,7 @@ export default function App() {
       <Route path="/" element={user ? <Navigate to="/app" replace /> : <LandingPage />} />
       <Route path="/login"  element={user ? <Navigate to="/app" replace /> : <LandingPage initialMode="login"  />} />
       <Route path="/signup" element={user ? <Navigate to="/app" replace /> : <LandingPage initialMode="signup" />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/app/*"  element={user ? <AppLayout /> : <Navigate to="/" replace />} />
       <Route path="*"       element={<Navigate to="/" replace />} />
     </Routes>

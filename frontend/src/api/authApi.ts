@@ -49,6 +49,14 @@ export async function changePasswordApi(
   )
 }
 
+export async function forgotPasswordApi(email: string): Promise<void> {
+  await authClient.post('/api/auth/forgot-password', { email })
+}
+
+export async function resetPasswordApi(token: string, newPassword: string): Promise<void> {
+  await authClient.post('/api/auth/reset-password', { token, newPassword })
+}
+
 export function extractApiError(err: unknown): string {
   if (axios.isAxiosError(err)) {
     return err.response?.data?.error ?? err.message

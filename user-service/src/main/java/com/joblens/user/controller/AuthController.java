@@ -2,12 +2,15 @@ package com.joblens.user.controller;
 
 import com.joblens.user.dto.AuthResponse;
 import com.joblens.user.dto.ChangePasswordRequest;
+import com.joblens.user.dto.ForgotPasswordRequest;
 import com.joblens.user.dto.LoginRequest;
+import com.joblens.user.dto.ResetPasswordRequest;
 import com.joblens.user.dto.SignupRequest;
 import com.joblens.user.dto.UserResponse;
 import com.joblens.user.model.User;
 import com.joblens.user.repository.UserRepository;
 import com.joblens.user.service.JwtService;
+import com.joblens.user.service.PasswordResetService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -26,6 +29,7 @@ public class AuthController {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final PasswordResetService passwordResetService;
 
     @PostMapping("/signup")
     public ResponseEntity<?> signup(@RequestBody SignupRequest request) {
@@ -97,5 +101,31 @@ public class AuthController {
         user.setPassword(passwordEncoder.encode(request.newPassword()));
         userRepository.save(user);
         return ResponseEntity.ok(Map.of("message", "Password updated successfully"));
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<?> forgotPassword(@RequestBody ForgotPasswordRequest request) {
+        if (request.email() == null || request.email().isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Email is required"));
+        }
+        try {
+            passwordResetService.requestReset(request.email());
+        } catch (Exception e) {
+            // Swallow all errors — never reveal account existence or internal failures
+        }
+        return ResponseEntity.ok(Map.of("message", "If an account with that email exists, a reset link has been sent."));
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordRequest request) {
+        if (request.token() == null || request.newPassword() == null) {
+            return ResponseEntity.badRequest().body(Map.of("error", "token and newPassword are required"));
+        }
+        try {
+            passwordResetService.resetPassword(request.token(), request.newPassword());
+            return ResponseEntity.ok(Map.of("message", "Password reset successfully"));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
     }
 }
