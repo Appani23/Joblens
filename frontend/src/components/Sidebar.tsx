@@ -1,14 +1,9 @@
+import { NavLink } from 'react-router-dom'
 import type { AuthUser } from '../context/AuthContext'
 import { Logo, LogoWordmark } from './Logo'
 
-export type View = 'all' | 'recommended' | 'favorites' | 'applied' | 'resume' | 'settings'
-
 interface Props {
-  active: View
   user: AuthUser | null
-  restoring: boolean
-  onNavigate: (v: View) => void
-  onLogin: () => void
   onLogout: () => void
 }
 
@@ -68,124 +63,116 @@ function IconCog() {
   )
 }
 
-interface NavItemProps {
-  icon: React.ReactNode
-  label: string
-  active: boolean
-  onClick: () => void
-}
+const navCls = ({ isActive }: { isActive: boolean }) =>
+  [
+    'flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 text-left',
+    isActive
+      ? 'bg-indigo-600/15 text-indigo-300 border border-indigo-500/20'
+      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 border border-transparent',
+  ].join(' ')
 
-function NavItem({ icon, label, active, onClick }: NavItemProps) {
-  return (
-    <button
-      onClick={onClick}
-      className={[
-        'flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 text-left',
-        active
-          ? 'bg-indigo-600/15 text-indigo-300 border border-indigo-500/20'
-          : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 border border-transparent',
-      ].join(' ')}
-    >
-      <span className={active ? 'text-indigo-400' : 'text-slate-500'}>{icon}</span>
-      <span className="hidden md:block">{label}</span>
-    </button>
-  )
-}
+const iconCls = (active: boolean) => active ? 'text-indigo-400' : 'text-slate-500'
 
-export default function Sidebar({ active, user, restoring, onNavigate, onLogin, onLogout }: Props) {
+export default function Sidebar({ user, onLogout }: Props) {
   const avatar = user ? (user.name ?? user.email).charAt(0).toUpperCase() : null
-
-  function navOrLogin(view: View) {
-    return user ? () => onNavigate(view) : onLogin
-  }
 
   return (
     <aside className="w-16 md:w-60 h-screen shrink-0 flex flex-col border-r border-slate-800/60 bg-[#080b12]">
 
       {/* Logo */}
       <div className="h-16 flex items-center px-3 md:px-4 border-b border-slate-800/60 shrink-0">
-        <div className="hidden md:flex">
+        <NavLink to="/app/jobs" className="hidden md:flex">
           <LogoWordmark size="md" />
-        </div>
-        <div className="md:hidden">
+        </NavLink>
+        <NavLink to="/app/jobs" className="md:hidden">
           <Logo size="sm" />
-        </div>
+        </NavLink>
       </div>
 
       {/* Primary nav */}
       <nav className="flex-1 overflow-y-auto py-4 px-2 md:px-3 flex flex-col gap-1">
-        <NavItem
-          icon={<IconBriefcase />}
-          label="All Jobs"
-          active={active === 'all'}
-          onClick={() => onNavigate('all')}
-        />
-        <NavItem
-          icon={<IconSparkle />}
-          label="Recommended"
-          active={active === 'recommended'}
-          onClick={navOrLogin('recommended')}
-        />
-        <NavItem
-          icon={<IconHeart />}
-          label="Favorites"
-          active={active === 'favorites'}
-          onClick={navOrLogin('favorites')}
-        />
-        <NavItem
-          icon={<IconCheck />}
-          label="Applied"
-          active={active === 'applied'}
-          onClick={navOrLogin('applied')}
-        />
-        <NavItem
-          icon={<IconDocument />}
-          label="Resume"
-          active={active === 'resume'}
-          onClick={navOrLogin('resume')}
-        />
+        <NavLink to="/app/jobs" end className={navCls}>
+          {({ isActive }) => (
+            <>
+              <span className={iconCls(isActive)}><IconBriefcase /></span>
+              <span className="hidden md:block">All Jobs</span>
+            </>
+          )}
+        </NavLink>
+        <NavLink to="/app/recommended" className={navCls}>
+          {({ isActive }) => (
+            <>
+              <span className={iconCls(isActive)}><IconSparkle /></span>
+              <span className="hidden md:block">Recommended</span>
+            </>
+          )}
+        </NavLink>
+        <NavLink to="/app/favorites" className={navCls}>
+          {({ isActive }) => (
+            <>
+              <span className={iconCls(isActive)}><IconHeart /></span>
+              <span className="hidden md:block">Favorites</span>
+            </>
+          )}
+        </NavLink>
+        <NavLink to="/app/applied" className={navCls}>
+          {({ isActive }) => (
+            <>
+              <span className={iconCls(isActive)}><IconCheck /></span>
+              <span className="hidden md:block">Applied</span>
+            </>
+          )}
+        </NavLink>
+        <NavLink to="/app/resume" className={navCls}>
+          {({ isActive }) => (
+            <>
+              <span className={iconCls(isActive)}><IconDocument /></span>
+              <span className="hidden md:block">Resume</span>
+            </>
+          )}
+        </NavLink>
       </nav>
 
       {/* Bottom section */}
       <div className="shrink-0 px-2 md:px-3 pb-4 flex flex-col gap-1">
-        <NavItem
-          icon={<IconCog />}
-          label="Settings"
-          active={active === 'settings'}
-          onClick={navOrLogin('settings')}
-        />
+        <NavLink to="/app/settings" className={navCls}>
+          {({ isActive }) => (
+            <>
+              <span className={iconCls(isActive)}><IconCog /></span>
+              <span className="hidden md:block">Settings</span>
+            </>
+          )}
+        </NavLink>
 
-        {!restoring && (
-          user ? (
-            <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-slate-800/40 border border-slate-800/60">
-              <div className="w-7 h-7 rounded-lg bg-indigo-600 flex items-center justify-center shrink-0 text-xs font-bold text-white">
-                {avatar}
-              </div>
-              <div className="hidden md:flex flex-col flex-1 min-w-0">
-                <span className="text-xs font-medium text-slate-300 truncate">
-                  {user.name ?? user.email}
-                </span>
-                <button
-                  onClick={onLogout}
-                  className="text-[0.65rem] text-slate-600 hover:text-slate-400 text-left transition-colors"
-                >
-                  Sign out
-                </button>
-              </div>
+        {user ? (
+          <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-slate-800/40 border border-slate-800/60">
+            <div className="w-7 h-7 rounded-lg bg-indigo-600 flex items-center justify-center shrink-0 text-xs font-bold text-white">
+              {avatar}
             </div>
-          ) : (
-            <div className="flex flex-col gap-1.5 px-1 md:px-0">
+            <div className="hidden md:flex flex-col flex-1 min-w-0">
+              <span className="text-xs font-medium text-slate-300 truncate">
+                {user.name ?? user.email}
+              </span>
               <button
-                onClick={onLogin}
-                className="w-full px-3 py-2 rounded-lg text-xs font-medium
-                  text-slate-300 border border-slate-700 hover:border-slate-500 hover:text-white
-                  bg-slate-900 hover:bg-slate-800 transition-colors"
+                onClick={onLogout}
+                className="text-[0.65rem] text-slate-600 hover:text-slate-400 text-left transition-colors"
               >
-                <span className="hidden md:inline">Log in</span>
-                <span className="md:hidden">←</span>
+                Sign out
               </button>
             </div>
-          )
+          </div>
+        ) : (
+          <div className="flex flex-col gap-1.5 px-1 md:px-0">
+            <NavLink
+              to="/login"
+              className="w-full px-3 py-2 rounded-lg text-xs font-medium text-center
+                text-slate-300 border border-slate-700 hover:border-slate-500 hover:text-white
+                bg-slate-900 hover:bg-slate-800 transition-colors"
+            >
+              <span className="hidden md:inline">Log in</span>
+              <span className="md:hidden">←</span>
+            </NavLink>
+          </div>
         )}
       </div>
     </aside>
